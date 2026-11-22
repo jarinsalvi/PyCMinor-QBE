@@ -35,6 +35,7 @@ class SemanticAnalyzer:
         self.symbol_table = SymbolTable()
         self.diagnostics = []
         self.loop_depth = 0
+        self.current_return_type = None
 
     def add_error(self, code, line, col, msg):
         self.diagnostics.append(Diagnostic(
@@ -128,7 +129,12 @@ class SemanticAnalyzer:
                     f"Duplicate parameter '{param.name}'"
                 )
 
+        previous_return_type = self.current_return_type
+        self.current_return_type = decl.return_type
+
         self._visit_statement(decl.body)
+
+        self.current_return_type = previous_return_type
         self.symbol_table.exit_scope()
 
     def _visit_statement(self, node):
@@ -185,6 +191,30 @@ class SemanticAnalyzer:
 
         elif isinstance(node, ReturnStatement):
             self._visit_expression(node.expression)
+
+            actual_type = self._infer_expression_type(node.expression)
+            expected_type = self.current_return_type
+
+            if expected_type == "void" and node.expression is not None:
+                line, col = self.position(node)
+                self.add_error(
+                    "E017", line, col,
+                    "Void function cannot return a value"
+                )
+
+            elif expected_type != "void":
+                if node.expression is None:
+                    line, col = self.position(node)
+                    self.add_error(
+                        "E017", line, col,
+                        f"Function must return '{expected_type}'"
+                    )
+                elif actual_type and actual_type != expected_type:
+                    line, col = self.position(node)
+                    self.add_error(
+                        "E017", line, col,
+                        f"Expected return type '{expected_type}', got '{actual_type}'"
+                    )
 
         elif isinstance(node, IfStatement):
             self._visit_expression(node.condition)

@@ -159,3 +159,29 @@ def test_assignment_rejects_wrong_type():
     result = analyze(parse(source))
     assert not result.ok
     assert any(error.code == "E016" for error in result.diagnostics)
+
+
+def test_return_rejects_wrong_type():
+    source = """
+    int main(void) {
+        return true;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E017" for error in result.diagnostics)
+
+
+def test_void_function_rejects_return_value():
+    source = """
+    void show(void) {
+        return 10;
+    }
+    int main(void) {
+        show();
+        return 0;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E017" for error in result.diagnostics)

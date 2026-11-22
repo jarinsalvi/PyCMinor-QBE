@@ -185,17 +185,63 @@ class IRGenerator:
             return result
 
         if isinstance(node, BinaryExpression):
+            result = self.temp()
+
+            # Short-circuit AND (&&)
+            if node.operator == "&&":
+                false_label = self.label("and_false")
+                end_label = self.label("and_end")
+
+                left = self.expression(node.left)
+                self.emit("JZ", a=left, b=false_label)
+
+                right = self.expression(node.right)
+                self.emit("JZ", a=right, b=false_label)
+
+                self.emit("MOV", result, "1")
+                self.emit("JMP", a=end_label)
+
+                self.emit("LABEL", a=false_label)
+                self.emit("MOV", result, "0")
+                self.emit("LABEL", a=end_label)
+
+                return result
+
+            # Short-circuit OR (||)
+            if node.operator == "||":
+                right_label = self.label("or_right")
+                true_label = self.label("or_true")
+                false_label = self.label("or_false")
+                end_label = self.label("or_end")
+
+                left = self.expression(node.left)
+                self.emit("JZ", a=left, b=right_label)
+                self.emit("JMP", a=true_label)
+
+                self.emit("LABEL", a=right_label)
+                right = self.expression(node.right)
+                self.emit("JZ", a=right, b=false_label)
+                self.emit("JMP", a=true_label)
+
+                self.emit("LABEL", a=true_label)
+                self.emit("MOV", result, "1")
+                self.emit("JMP", a=end_label)
+
+                self.emit("LABEL", a=false_label)
+                self.emit("MOV", result, "0")
+                self.emit("LABEL", a=end_label)
+
+                return result
+
             left = self.expression(node.left)
             right = self.expression(node.right)
-            result = self.temp()
 
             operations = {
                 "+": "ADD", "-": "SUB", "*": "MUL",
                 "/": "DIV", "%": "MOD",
                 "==": "EQ", "!=": "NE",
                 "<": "LT", ">": "GT",
-                "<=": "LE", ">=": "GE",
-                "&&": "AND", "||": "OR"
+                "<=": "LE", ">=": "GE"
             }
 
             op = operations.get(node.operator)

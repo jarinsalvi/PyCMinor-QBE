@@ -398,7 +398,7 @@ class Lexer:
             # Operators
             # --------------------------------
 
-            elif char in OPERATORS:
+            elif char in OPERATORS or char + self.peek() in OPERATORS:
 
                 self.read_operator()
 

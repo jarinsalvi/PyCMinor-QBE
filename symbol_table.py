@@ -12,6 +12,7 @@ class Symbol:
     param_types: List[str] = field(default_factory=list)
     return_type: Optional[str] = None
     is_defined: bool = False
+    is_array: bool = False
 
 class SymbolTable:
     def __init__(self):
@@ -26,13 +27,13 @@ class SymbolTable:
         if len(self.scopes) > 1:
             self.scopes.pop()
 
-    def declare_variable(self, name: str, type_name: str, kind: str, line: int = 0, col: int = 0) -> Optional[Symbol]:
+    def declare_variable(self, name: str, type_name: str, kind: str, line: int = 0, col: int = 0, is_array: bool = False) -> Optional[Symbol]:
         current_scope = self.scopes[-1]
         if name in current_scope:
             return None
         sym_id = self._next_id
         self._next_id += 1
-        sym = Symbol(name=name, kind=kind, type_name=type_name, symbol_id=sym_id, line=line, column=col)
+        sym = Symbol(name=name, kind=kind, type_name=type_name, symbol_id=sym_id, line=line, column=col, is_array=is_array)
         current_scope[name] = sym
         return sym
 

@@ -182,7 +182,7 @@ class SemanticAnalyzer:
                 node.element_type,
                 "local",
                 line,
-                col
+                col, is_array=True
             )
 
             if sym is None:
@@ -344,12 +344,16 @@ class SemanticAnalyzer:
                 )
 
         elif isinstance(node, ArrayAccess):
-            if self.symbol_table.lookup_variable(node.array_name) is None:
+            sym = self.symbol_table.lookup_variable(node.array_name)
+            if sym is None:
                 line, col = self.position(node)
                 self.add_error(
                     "E007", line, col,
                     f"Undeclared array '{node.array_name}'"
                 )
+            elif not sym.is_array:
+                line, col = self.position(node)
+                self.add_error("E020", line, col, "Variable is not an array")
             self._visit_expression(node.index)
             index_type = self._infer_expression_type(node.index)
             if index_type != "int":

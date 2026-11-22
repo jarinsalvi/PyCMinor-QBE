@@ -330,3 +330,9 @@ def test_array_index_must_be_int():
     """
     result = analyze(parse(source))
     assert any(e.code == "E019" for e in result.diagnostics)
+
+
+def test_normal_variable_cannot_be_used_as_array():
+    source = "int main(void) { int x; int y = x[0]; return 0; }"
+    result = analyze(parse(source))
+    assert not result.ok

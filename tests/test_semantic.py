@@ -111,3 +111,15 @@ def test_nested_function_call_argument():
     """
     result = analyze(parse(source))
     assert result.ok
+
+
+def test_arithmetic_operator_rejects_bool_operand():
+    source = """
+    int main(void) {
+        bool flag = true;
+        return 5 + flag;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E014" for error in result.diagnostics)

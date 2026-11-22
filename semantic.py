@@ -302,6 +302,36 @@ class SemanticAnalyzer:
             self._visit_expression(node.left)
             self._visit_expression(node.right)
 
+            left_type = self._infer_expression_type(node.left)
+            right_type = self._infer_expression_type(node.right)
+
+            arithmetic_ops = {"+", "-", "*", "/", "%"}
+            comparison_ops = {"<", "<=", ">", ">="}
+            equality_ops = {"==", "!="}
+            logical_ops = {"&&", "||"}
+
+            if node.operator in arithmetic_ops | comparison_ops:
+                if left_type and left_type != "int":
+                    line, col = self.position(node)
+                    self.add_error(
+                        "E014", line, col,
+                        f"Operator '{node.operator}' requires int operands"
+                    )
+                if right_type and right_type != "int":
+                    line, col = self.position(node)
+                    self.add_error(
+                        "E014", line, col,
+                        f"Operator '{node.operator}' requires int operands"
+                    )
+
+            elif node.operator in equality_ops | logical_ops:
+                if left_type and right_type and left_type != right_type:
+                    line, col = self.position(node)
+                    self.add_error(
+                        "E014", line, col,
+                        f"Operator '{node.operator}' has incompatible operand types"
+                    )
+
         elif isinstance(node, UnaryExpression):
             self._visit_expression(node.operand)
 

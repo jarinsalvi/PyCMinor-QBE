@@ -8,7 +8,7 @@ from ast_nodes import (
     WhileStatement, ForStatement, BreakStatement, ContinueStatement,
     BinaryExpression, UnaryExpression,
     AssignmentExpression, VariableExpression, ArrayAccess,
-    CallExpression
+    CallExpression, IntegerLiteral, BooleanLiteral
 )
 
 
@@ -236,6 +236,47 @@ class SemanticAnalyzer:
                     "'continue' statement is only valid inside a loop"
                 )
 
+    def _infer_expression_type(self, node):
+        """Infer the basic type of an expression."""
+
+        if node is None:
+            return None
+
+        if isinstance(node, IntegerLiteral):
+            return "int"
+
+        if isinstance(node, BooleanLiteral):
+            return "bool"
+
+        if isinstance(node, VariableExpression):
+            sym = self.symbol_table.lookup_variable(node.name)
+            return sym.type_name if sym else None
+
+        if isinstance(node, ArrayAccess):
+            sym = self.symbol_table.lookup_variable(node.array_name)
+            return sym.type_name if sym else None
+
+        if isinstance(node, CallExpression):
+            sym = self.symbol_table.global_functions.get(node.function_name)
+            return sym.return_type if sym else None
+
+        if isinstance(node, AssignmentExpression):
+            return self._infer_expression_type(node.target)
+
+        if isinstance(node, UnaryExpression):
+            if node.operator == "!":
+                return "bool"
+            return self._infer_expression_type(node.operand)
+
+        if isinstance(node, BinaryExpression):
+            if node.operator in {
+                "==", "!=", "<", "<=", ">", ">=", "&&", "||"
+            }:
+                return "bool"
+            return self._infer_expression_type(node.left)
+
+        return None
+
     def _visit_expression(self, node):
         if node is None:
             return
@@ -289,6 +330,21 @@ class SemanticAnalyzer:
 
             for argument in node.arguments:
                 self._visit_expression(argument)
+
+            if function is not None:
+                for index, (argument, expected_type) in enumerate(
+                    zip(node.arguments, function.param_types), start=1
+                ):
+                    actual_type = self._infer_expression_type(argument)
+
+                    if actual_type is not None and actual_type != expected_type:
+                        line, col = self.position(argument)
+                        self.add_error(
+                            "E013", line, col,
+                            f"Argument {index} of function "
+                            f"'{node.function_name}' expects "
+                            f"'{expected_type}', but got '{actual_type}'"
+                        )
 
 
 def analyze(program_ast, file_path="main.cm"):

@@ -210,3 +210,41 @@ def test_if_else_both_branches_return():
     """
     result = analyze(parse(source))
     assert result.ok
+
+
+def test_nested_block_return_is_recognized():
+    source = """
+    int main(void) {
+        {
+            return 5;
+        }
+    }
+    """
+    result = analyze(parse(source))
+    assert result.ok
+
+
+def test_if_without_else_does_not_guarantee_return():
+    source = """
+    int main(void) {
+        if (true) {
+            return 1;
+        }
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E018" for error in result.diagnostics)
+
+
+def test_loop_return_does_not_guarantee_function_return():
+    source = """
+    int main(void) {
+        while (true) {
+            return 1;
+        }
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E018" for error in result.diagnostics)

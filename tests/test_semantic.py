@@ -123,3 +123,26 @@ def test_arithmetic_operator_rejects_bool_operand():
     result = analyze(parse(source))
     assert not result.ok
     assert any(error.code == "E014" for error in result.diagnostics)
+
+
+def test_logical_not_rejects_int_operand():
+    source = """
+    int main(void) {
+        return !5;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E015" for error in result.diagnostics)
+
+
+def test_unary_minus_rejects_bool_operand():
+    source = """
+    int main(void) {
+        bool flag = true;
+        return -flag;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E015" for error in result.diagnostics)

@@ -335,6 +335,22 @@ class SemanticAnalyzer:
         elif isinstance(node, UnaryExpression):
             self._visit_expression(node.operand)
 
+            operand_type = self._infer_expression_type(node.operand)
+
+            if node.operator == "!" and operand_type and operand_type != "bool":
+                line, col = self.position(node)
+                self.add_error(
+                    "E015", line, col,
+                    "Logical NOT operator '!' requires a bool operand"
+                )
+
+            elif node.operator == "-" and operand_type and operand_type != "int":
+                line, col = self.position(node)
+                self.add_error(
+                    "E015", line, col,
+                    "Unary minus operator '-' requires an int operand"
+                )
+
         elif isinstance(node, AssignmentExpression):
             self._visit_expression(node.target)
             self._visit_expression(node.value)

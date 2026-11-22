@@ -146,3 +146,16 @@ def test_unary_minus_rejects_bool_operand():
     result = analyze(parse(source))
     assert not result.ok
     assert any(error.code == "E015" for error in result.diagnostics)
+
+
+def test_assignment_rejects_wrong_type():
+    source = """
+    int main(void) {
+        int x = 5;
+        x = true;
+        return x;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E016" for error in result.diagnostics)

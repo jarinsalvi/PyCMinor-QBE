@@ -355,6 +355,16 @@ class SemanticAnalyzer:
             self._visit_expression(node.target)
             self._visit_expression(node.value)
 
+            target_type = self._infer_expression_type(node.target)
+            value_type = self._infer_expression_type(node.value)
+
+            if target_type and value_type and target_type != value_type:
+                line, col = self.position(node)
+                self.add_error(
+                    "E016", line, col,
+                    f"Cannot assign '{value_type}' to '{target_type}'"
+                )
+
         elif isinstance(node, CallExpression):
             line, col = self.position(node)
             function = self.symbol_table.global_functions.get(

@@ -320,3 +320,13 @@ def test_conflicting_function_prototype():
     result = analyze(parse(source))
     assert not result.ok
     assert any(error.code == "E004" for error in result.diagnostics)
+def test_array_index_must_be_int():
+    source = """
+    int main(void) {
+        int arr[5];
+        int x = arr[true];
+        return 0;
+    }
+    """
+    result = analyze(parse(source))
+    assert any(e.code == "E019" for e in result.diagnostics)

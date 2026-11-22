@@ -351,6 +351,10 @@ class SemanticAnalyzer:
                     f"Undeclared array '{node.array_name}'"
                 )
             self._visit_expression(node.index)
+            index_type = self._infer_expression_type(node.index)
+            if index_type != "int":
+                line, col = self.position(node)
+                self.add_error("E019", line, col, "Array index must be int")
 
         elif isinstance(node, BinaryExpression):
             self._visit_expression(node.left)

@@ -185,3 +185,28 @@ def test_void_function_rejects_return_value():
     result = analyze(parse(source))
     assert not result.ok
     assert any(error.code == "E017" for error in result.diagnostics)
+
+
+def test_non_void_function_requires_return():
+    source = """
+    int main(void) {
+        int x = 10;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E018" for error in result.diagnostics)
+
+
+def test_if_else_both_branches_return():
+    source = """
+    int main(void) {
+        if (true) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+    """
+    result = analyze(parse(source))
+    assert result.ok

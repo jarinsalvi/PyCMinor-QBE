@@ -134,6 +134,11 @@ class SemanticAnalyzer:
 
         self._visit_statement(decl.body)
 
+        if decl.return_type != "void" and not self._always_returns(decl.body):
+            line, col = self.position(decl)
+            self.add_error("E018", line, col,
+                           f"Function '{decl.name}' may finish without returning")
+
         self.current_return_type = previous_return_type
         self.symbol_table.exit_scope()
 
@@ -265,6 +270,25 @@ class SemanticAnalyzer:
                     "E011", line, col,
                     "'continue' statement is only valid inside a loop"
                 )
+
+    def _always_returns(self, node):
+        if node is None:
+            return False
+
+        if isinstance(node, ReturnStatement):
+            return True
+
+        if isinstance(node, Block):
+            return any(self._always_returns(stmt) for stmt in node.statements)
+
+        if isinstance(node, IfStatement):
+            return (
+                node.else_branch is not None
+                and self._always_returns(node.then_branch)
+                and self._always_returns(node.else_branch)
+            )
+
+        return False
 
     def _infer_expression_type(self, node):
         """Infer the basic type of an expression."""

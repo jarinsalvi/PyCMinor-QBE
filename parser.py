@@ -6,6 +6,7 @@ from ast_nodes import (
     ASTNode,
     Program,
     Function,
+    FunctionPrototype,
     Parameter,
     VariableDeclaration,
     ArrayDeclaration,
@@ -14,6 +15,9 @@ from ast_nodes import (
     ReturnStatement,
     IfStatement,
     WhileStatement,
+    ForStatement,
+    BreakStatement,
+    ContinueStatement,
     BinaryExpression,
     UnaryExpression,
     AssignmentExpression,
@@ -165,33 +169,38 @@ class Parser:
     # Function declaration
     # --------------------------------------
 
-    def parse_function(
-        self,
-        return_type: str,
-        name: str
-    ) -> Function:
-
+    def parse_function(self, return_type: str, name: str) -> ASTNode:
         self.expect("LPAREN")
-
         parameters = []
 
-        # Empty parameter list
         if self.check("RPAREN"):
             self.advance()
-
-        # Special case: main(void)
         elif self.check("VOID"):
             self.advance()
             self.expect("RPAREN")
-
         else:
-
-            parameters = self.parse_parameters()
-
+            parameters = self.parse_parameters(allow_unnamed=True)
             self.expect("RPAREN")
 
-        body = self.parse_block()
+        # Prototype: int sum(int);
+        if self.check("SEMICOLON"):
+            self.advance()
+            return FunctionPrototype(
+                return_type=return_type,
+                name=name,
+                parameters=parameters
+            )
 
+        # Definitions require parameter names.
+        for param in parameters:
+            if not param.name:
+                token = self.current_token()
+                raise ParserError(
+                    f"Function definition parameters need names "
+                    f"at line {token.line}"
+                )
+
+        body = self.parse_block()
         return Function(
             return_type=return_type,
             name=name,
@@ -199,16 +208,10 @@ class Parser:
             body=body
         )
 
-    # --------------------------------------
-    # Function parameters
-    # --------------------------------------
-
-    def parse_parameters(self) -> List[Parameter]:
-
+    def parse_parameters(self, allow_unnamed=False) -> List[Parameter]:
         parameters = []
 
         while True:
-
             param_type = self.parse_type()
 
             if param_type == "void":
@@ -218,18 +221,19 @@ class Parser:
                     f"parameter at line {token.line}"
                 )
 
-            param_name = self.expect("IDENTIFIER").value
+            param_name = ""
+            if self.check("IDENTIFIER"):
+                param_name = self.advance().value
+            elif not allow_unnamed:
+                self.expect("IDENTIFIER")
 
-            parameters.append(
-                Parameter(
-                    param_type=param_type,
-                    name=param_name
-                )
-            )
+            parameters.append(Parameter(
+                param_type=param_type,
+                name=param_name
+            ))
 
             if not self.check("COMMA"):
                 break
-
             self.advance()
 
         return parameters
@@ -241,7 +245,8 @@ class Parser:
     def parse_variable_declaration(
         self,
         var_type: str,
-        name: str
+        name: str,
+        consume_semicolon: bool = True
     ) -> ASTNode:
 
         # Array declaration
@@ -257,7 +262,8 @@ class Parser:
                 size = int(size_token.value)
 
             self.expect("RBRACKET")
-            self.expect("SEMICOLON")
+            if consume_semicolon:
+                self.expect("SEMICOLON")
 
             return ArrayDeclaration(
                 element_type=var_type,
@@ -274,7 +280,8 @@ class Parser:
 
             initializer = self.parse_expression()
 
-        self.expect("SEMICOLON")
+        if consume_semicolon:
+            self.expect("SEMICOLON")
 
         return VariableDeclaration(
             var_type=var_type,
@@ -341,6 +348,22 @@ class Parser:
         # While statement
         if self.check("WHILE"):
             return self.parse_while_statement()
+
+        # For statement
+        if self.check("FOR"):
+            return self.parse_for_statement()
+
+        # Break statement
+        if self.check("BREAK"):
+            self.advance()
+            self.expect("SEMICOLON")
+            return BreakStatement()
+
+        # Continue statement
+        if self.check("CONTINUE"):
+            self.advance()
+            self.expect("SEMICOLON")
+            return ContinueStatement()
 
         # Empty statement
         if self.check("SEMICOLON"):
@@ -421,6 +444,56 @@ class Parser:
 
         return WhileStatement(
             condition=condition,
+            body=body
+        )
+
+    # --------------------------------------
+    # For statement
+    # --------------------------------------
+
+    def parse_for_statement(self) -> ForStatement:
+
+        self.expect("FOR")
+        self.expect("LPAREN")
+
+        initializer = None
+
+        if not self.check("SEMICOLON"):
+
+            if self.is_type():
+                var_type = self.parse_type()
+                name = self.expect("IDENTIFIER").value
+
+                initializer = self.parse_variable_declaration(
+                    var_type,
+                    name,
+                    consume_semicolon=False
+                )
+            else:
+                initializer = self.parse_expression()
+
+        self.expect("SEMICOLON")
+
+        condition = None
+
+        if not self.check("SEMICOLON"):
+            condition = self.parse_expression()
+
+        self.expect("SEMICOLON")
+
+        update = None
+
+        if not self.check("RPAREN"):
+            update = self.parse_expression()
+
+        self.expect("RPAREN")
+
+        body = self.parse_statement()
+
+        return ForStatement(
+            initializer=initializer,
+            condition=condition,
+            update=update,
             body=body
         )
 

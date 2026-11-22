@@ -264,3 +264,32 @@ if __name__ == "__main__":
     )
 
     print_ast(program)
+
+
+# Function prototype (declaration without a body)
+@dataclass
+class FunctionPrototype(ASTNode):
+    return_type: str
+    name: str
+    parameters: List[Parameter] = field(default_factory=list)
+
+
+# For loop
+@dataclass
+class ForStatement(ASTNode):
+    initializer: Optional[ASTNode]
+    condition: Optional[ASTNode]
+    update: Optional[ASTNode]
+    body: ASTNode
+
+
+# Break statement
+@dataclass
+class BreakStatement(ASTNode):
+    pass
+
+
+# Continue statement
+@dataclass
+class ContinueStatement(ASTNode):
+    pass

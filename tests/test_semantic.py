@@ -248,3 +248,75 @@ def test_loop_return_does_not_guarantee_function_return():
     result = analyze(parse(source))
     assert not result.ok
     assert any(error.code == "E018" for error in result.diagnostics)
+
+
+def test_recursive_function_call():
+    source = """
+    int factorial(int n) {
+        if (n <= 1) {
+            return 1;
+        } else {
+            return n * factorial(n - 1);
+        }
+    }
+    int main(void) {
+        return factorial(5);
+    }
+    """
+    result = analyze(parse(source))
+    assert result.ok
+
+
+def test_function_wrong_argument_count():
+    source = """
+    int add(int a, int b) {
+        return a + b;
+    }
+    int main(void) {
+        return add(5);
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E009" for error in result.diagnostics)
+
+
+def test_undeclared_function_call():
+    source = """
+    int main(void) {
+        return unknown(10);
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E008" for error in result.diagnostics)
+
+
+def test_duplicate_function_definition():
+    source = """
+    int helper(void) {
+        return 1;
+    }
+    int helper(void) {
+        return 2;
+    }
+    int main(void) {
+        return helper();
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E004" for error in result.diagnostics)
+
+
+def test_conflicting_function_prototype():
+    source = """
+    int helper(int x);
+    bool helper(int x);
+    int main(void) {
+        return 0;
+    }
+    """
+    result = analyze(parse(source))
+    assert not result.ok
+    assert any(error.code == "E004" for error in result.diagnostics)
